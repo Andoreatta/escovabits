@@ -1,22 +1,19 @@
-<%= form_with url: "/compile", method: :post, data: { controller: "compiler", action: "input->compiler#compile" } do |form| %>
+<%= form_with url: "/compile", method: :post, data: { controller: "compiler" } do |form| %>
   <div class="flex h-screen bg-gray-800 text-white">
     <div class="w-1/2 p-4 flex flex-col">
       <h2 class="text-lg font-bold mb-2">Código Fonte</h2>
 
       <div class="flex items-center space-x-4 mb-2">
-        <select class="bg-gray-700 rounded p-2">
-          <option>C++</option>
-          <option>Go</option>
-        </select>
-        <input type="text" placeholder="Flags de compilação (ex: -O2)" class="bg-gray-700 rounded p-2 w-full">
+        <%= form.select :language, ['cpp', 'go'], {}, { class: "bg-gray-700 rounded p-2", name: "language", data: { action: "change->compiler#changeLanguage", "compiler-target": "languageSelect" } } %>
+        <%= form.text_field :compiler_flags, placeholder: "Flags de compilação (ex: -O2)", class: "bg-gray-700 rounded p-2 w-full", name: "compiler_flags", data: { action: "input->compiler#compileDebounced" } %>
       </div>
 
-      <%= form.text_area :source_code, class: "w-full h-full bg-gray-900 rounded font-mono p-2", placeholder: "Digite seu código aqui...", data: { "compiler-target": "source" } %>
+      <%= form.text_area :source_code, value: @source_code, class: "w-full h-full bg-gray-900 rounded font-mono p-2", placeholder: "Digite seu código aqui...", data: { "compiler-target": "source", action: "input->compiler#compileDebounced" } %>
     </div>
 
     <div class="w-1/2 p-4 flex flex-col">
       <h2 class="text-lg font-bold mb-2">Output (Assembly)</h2>
-      <%= turbo_frame_tag "output_frame" do %>
+      <%= turbo_frame_tag "output_frame", data: { "compiler-target": "output" } do %>
         <pre class="w-full h-full bg-gray-900 rounded font-mono p-2 overflow-auto">
           O código Assembly aparecerá aqui...
         </pre>
