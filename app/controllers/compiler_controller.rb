@@ -50,8 +50,11 @@ class CompilerController < ApplicationController
       default_flags = %w[-fno-ident -fno-verbose-asm -fno-unwind-tables -masm=intel]
       [ "g++", "-S" ] + default_flags + safe_flags + [ "%{file}", "-o", "-" ]
     when "go"
-      # Para Go, as flags vêm antes do comando compile
-      [ "go", "tool", "compile" ] + safe_flags + [ "-S", "%{file}" ]
+      # Usamos 'go build -gcflags="-S"' que lida com pacotes e imprime o assembly em stderr.
+      # O executável resultante é descartado.
+      # As flags do usuário são passadas para -gcflags.
+      gcflags = ([ "-S" ] + safe_flags).join(" ")
+      [ "go", "build", "-gcflags=#{gcflags}", "%{file}" ]
     end
   end
 end

@@ -42,8 +42,10 @@ class CompilationService
         stdout, stderr, status = Open3.capture3(*command)
       end
 
+      # Alguns compiladores (ex: Go com -gcflags) imprimem o assembly em stderr.
+      # Se o status for sucesso, consideramos a junção de stdout e stderr como a saída.
       if status.success?
-        stdout
+        stdout + stderr
       else
         "Erro na compilação:\n" + stderr
       end
