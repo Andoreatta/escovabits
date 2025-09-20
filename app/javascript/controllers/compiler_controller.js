@@ -1,13 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["source", "output", "languageSelect", "countdown", "sourceLineNumbers", "outputLineNumbers"]
+  static targets = ["source", "output", "languageSelect", "countdown", "sourceLineNumbers", "outputLineNumbers", "compilerFlags"]
 
   connect() {
     this.compileTimeout = null
     this.countdownInterval = null
-    this.sourceLineCount = 0
-    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget, true)
+    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget)
     this.initializeOutputObserver()
   }
 
@@ -21,7 +20,7 @@ export default class extends Controller {
 
   // Ação acionada pela digitação do usuário
   startDebouncedCompile() {
-    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget, true)
+    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget)
     clearTimeout(this.compileTimeout)
     clearInterval(this.countdownInterval)
 
@@ -54,10 +53,11 @@ export default class extends Controller {
   }
 
   async changeLanguage() {
+    this.compilerFlagsTarget.value = ""
     const language = this.languageSelectTarget.value
     const response = await fetch(`/hello_world?language=${language}`)
     this.sourceTarget.value = await response.text()
-    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget, true)
+    this.updateLineNumbers(this.sourceTarget, this.sourceLineNumbersTarget)
     this.compile()
   }
 
@@ -72,14 +72,14 @@ export default class extends Controller {
     }
   }
 
-  updateLineNumbers(codeElement, lineNumbersElement, isSource = false) {
-    const content = codeElement.tagName === 'TEXTAREA' ? codeElement.value : codeElement.textContent
-    const lineCount = (content.match(/\n/g) || []).length + 1
+  updateLineNumbers(codeElement, lineNumbersElement) {
+    const content = codeElement.tagName === 'TEXTAREA' ? codeElement.value : codeElement.textContent;
+    const lineCount = (content.match(/\n/g) || []).length + 1;
+    
+    if (lineNumbersElement.childElementCount === lineCount) return;
 
-    if (isSource && this.sourceLineCount === lineCount) return
-    if (isSource) this.sourceLineCount = lineCount
-
-    lineNumbersElement.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join("\n")
+    // Usar spans em vez de texto puro com \n melhora o alinhamento e a performance.
+    lineNumbersElement.innerHTML = Array.from({ length: lineCount }, (_, i) => `<span>${i + 1}</span>`).join('');
   }
 
   syncScroll(event) {
@@ -92,13 +92,8 @@ export default class extends Controller {
 
   // Observa o 'outputTarget' para quando o Turbo Stream atualizar seu conteúdo
   initializeOutputObserver() {
-    this.outputObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          this.onOutputUpdate()
-          break // Processa apenas uma vez
-        }
-      }
+    this.outputObserver = new MutationObserver(() => {
+      this.onOutputUpdate()
     })
 
     this.outputObserver.observe(this.outputTarget, { childList: true })
@@ -106,7 +101,7 @@ export default class extends Controller {
 
   // Chamado quando o conteúdo do output é atualizado pelo observer
   onOutputUpdate() {
-    const outputPre = this.outputTarget.querySelector('[data-action*="scroll->compiler#syncScroll"]')
+    const outputPre = this.outputTarget.querySelector('[data-compiler-output-code]')
     if (outputPre && this.hasOutputLineNumbersTarget) {
       this.updateLineNumbers(outputPre, this.outputLineNumbersTarget)
       this.syncScroll({ target: outputPre })

@@ -17,12 +17,18 @@ class CompilationService
   end
 
   def call
-    file_extension = { "cpp" => ".cpp", "go" => ".go" }[@language] || ".tmp"
+    file_extension = LanguageConfigService.extension_for(@language)
     temp_file = Tempfile.new([ "source", file_extension ])
     temp_file.write(@source_code)
     temp_file.close
 
-    command = build_command(temp_file.path)
+    # Cria um arquivo de saída temporário se a linguagem precisar
+    if LanguageConfigService.needs_outfile?(@language)
+      output_temp_file = Tempfile.new("compiler-output")
+      output_temp_file.close
+    end
+
+    command = build_command(temp_file.path, output_temp_file&.path)
 
     if command.empty?
       return "Linguagem não suportada."
@@ -31,33 +37,35 @@ class CompilationService
     execute_command(command)
   ensure
     temp_file.unlink if temp_file
+    output_temp_file.unlink if output_temp_file
   end
 
-  private
+    private
 
-  def execute_command(command)
-    stdout, stderr, status = nil
-    begin
-      Timeout.timeout(COMPILER_TIMEOUT) do
-        stdout, stderr, status = Open3.capture3(*command)
-      end
+    def execute_command(command)
+      stdout, stderr, status = nil
+      begin
+        Timeout.timeout(COMPILER_TIMEOUT) do
+          stdout, stderr, status = Open3.capture3(*command)
+        end
 
-      # Alguns compiladores (ex: Go com -gcflags) imprimem o assembly em stderr.
-      # Se o status for sucesso, consideramos a junção de stdout e stderr como a saída.
-      if status.success?
-        stdout + stderr
-      else
-        "Erro na compilação:\n" + stderr
+        # Alguns compiladores (ex: Go com -gcflags) imprimem o assembly em stderr.
+        # Se o status for sucesso, consideramos a junção de stdout e stderr como a saída.
+        if status.success?
+          stdout + stderr
+        else
+          "Erro na compilação:\n" + stderr
+        end
+      rescue Timeout::Error
+        "Erro: O tempo de compilação excedeu #{COMPILER_TIMEOUT} segundos."
+      rescue => e
+        "Erro ao executar o comando de compilação: #{e.message}"
       end
-    rescue Timeout::Error
-      "Erro: O tempo de compilação excedeu #{COMPILER_TIMEOUT} segundos."
-    rescue => e
-      "Erro ao executar o comando de compilação: #{e.message}"
     end
-  end
 
-  def build_command(file_path)
-    # Substitui o placeholder %{file} pelo caminho real do arquivo temporário
-    @command_template.map { |arg| arg == "%{file}" ? file_path : arg }
-  end
+    def build_command(file_path, output_file_path = nil)
+      @command_template.map do |arg|
+        arg.gsub("%{file}", file_path).gsub("%{outfile}", output_file_path || "")
+      end
+    end
 end

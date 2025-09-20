@@ -3,13 +3,8 @@ require "tempfile"
 require "shellwords"
 
 class CompilerController < ApplicationController
-  HELLO_WORLDS = {
-    "cpp" => "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\";\n    return 0;\n}",
-    "go" => "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, World!\")\n}"
-  }.freeze
-
   def index
-    @source_code = HELLO_WORLDS["cpp"]
+    @source_code = LanguageConfigService.hello_world_for("cpp")
   end
 
   def compile
@@ -17,12 +12,12 @@ class CompilerController < ApplicationController
     language = params[:language] || "cpp"
     compiler_flags = params[:compiler_flags] || ""
 
-    command = build_command(language, compiler_flags)
+    command_template = LanguageConfigService.command_for(language, Shellwords.split(compiler_flags))
 
     assembly_output = CompilationService.call(
       source_code: source_code,
       language: language,
-      command_template: command
+      command_template: command_template
     )
 
     @assembly_output = AssemblyFilterService.call(assembly_output, language: language)
@@ -36,9 +31,9 @@ class CompilerController < ApplicationController
 
   def hello_world
     language = params[:language] || "cpp"
-    render plain: HELLO_WORLDS.fetch(language, "")
+    render plain: LanguageConfigService.hello_world_for(language)
   end
-
+end
   private
 
   def build_command(language, user_flags)
@@ -46,15 +41,13 @@ class CompilerController < ApplicationController
 
     case language
     when "cpp"
-      # Flags para simplificar a saída do assembly e usar sintaxe Intel
       default_flags = %w[-fno-ident -fno-verbose-asm -fno-unwind-tables -masm=intel]
       [ "g++", "-S" ] + default_flags + safe_flags + [ "%{file}", "-o", "-" ]
     when "go"
       # Usamos 'go build -gcflags="-S"' que lida com pacotes e imprime o assembly em stderr.
-      # O executável resultante é descartado.
+      # O executável resultante é direcionado para um arquivo temporário (%{outfile}) que é então descartado.
       # As flags do usuário são passadas para -gcflags.
       gcflags = ([ "-S" ] + safe_flags).join(" ")
-      [ "go", "build", "-gcflags=#{gcflags}", "%{file}" ]
+      [ "go", "build", "-o", "%{outfile}", "-gcflags=#{gcflags}", "%{file}" ]
     end
   end
-end

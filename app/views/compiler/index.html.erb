@@ -5,11 +5,11 @@
 
       <div class="flex items-center space-x-4 mb-2">
         <%= form.select :language, ['cpp', 'go'], {}, { class: "bg-gray-700 rounded p-2", name: "language", data: { action: "change->compiler#changeLanguage", "compiler-target": "languageSelect" } } %>
-        <%= form.text_field :compiler_flags, placeholder: "Flags de compilação (ex: -O2)", class: "bg-gray-700 rounded p-2 w-full", name: "compiler_flags", data: { action: "input->compiler#startDebouncedCompile" } %>
+        <%= form.text_field :compiler_flags, placeholder: "Flags de compilação (ex: -O2)", class: "bg-gray-700 rounded p-2 w-full", name: "compiler_flags", data: { action: "input->compiler#startDebouncedCompile", "compiler-target": "compilerFlags" } %>
       </div>
 
       <div class="relative w-full h-full">
-        <pre class="absolute top-0 left-0 h-full p-2 text-right text-gray-500 bg-gray-900 rounded-l-md select-none overflow-hidden" data-compiler-target="sourceLineNumbers">1</pre>
+        <pre class="absolute top-0 left-0 h-full p-2 text-right text-gray-500 bg-gray-900 rounded-l-md select-none overflow-hidden flex flex-col" data-compiler-target="sourceLineNumbers">1</pre>
         <%= form.text_area :source_code, value: @source_code, class: "w-full h-full bg-gray-900 rounded-md font-mono p-2 !pl-12 resize-none", placeholder: "Digite seu código aqui...", data: { "compiler-target": "source", action: "input->compiler#startDebouncedCompile scroll->compiler#syncScroll" } %>
       </div>
     </div>
@@ -26,7 +26,7 @@
       </h2>
       <div class="relative flex-1 min-h-0">
         <%= turbo_frame_tag "output_frame", class: "w-full h-full", data: { "compiler-target": "output" } do %>
-          <pre class="absolute top-0 left-0 h-full p-2 text-right text-gray-500 bg-gray-900 rounded-l-md select-none overflow-hidden" data-compiler-target="outputLineNumbers">1</pre>
+          <pre class="absolute top-0 left-0 h-full p-2 text-right text-gray-500 bg-gray-900 rounded-l-md select-none overflow-hidden flex flex-col" data-compiler-target="outputLineNumbers">1</pre>
           <pre class="w-full h-full bg-gray-900 rounded-md font-mono p-2 !pl-12 overflow-auto" data-action="scroll->compiler#syncScroll">
             O código Assembly aparecerá aqui...
           </pre>

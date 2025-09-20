@@ -4,7 +4,7 @@ class AssemblyFilterService
     "cpp" => {
       # Mantivemos diretivas de dados (.string, .long, etc.) e de seção (.text, .data)
       # removendo-as da lista de filtros.
-      directive_regex: /^\s*\.(file|loc|cfi_.*|def|endef|ident|scl|end|hidden|lcomm|intel_syntax|att_syntax|pushsection|popsection|previous|set|equ|skip|space|zero|rept|endr|if.*|else|endif|gnu_attribute|version|eabi_attribute|fpu|arch|thumb|thumb_func|fnstart|fnend|personality|lsda|handlerdata|reloc|fill|org)\b/,
+      directive_regex: /^\s*\.(file|loc|cfi_.*|def|endef|ident|scl|type|size|end|hidden|lcomm|intel_syntax|att_syntax|pushsection|popsection|previous|set|equ|skip|space|zero|rept|endr|if.*|else|endif|gnu_attribute|version|eabi_attribute|fpu|arch|thumb|thumb_func|fnstart|fnend|personality|lsda|handlerdata|reloc|fill|org|p2align)\b/,
       label_regex: /^\s*([.a-zA-Z_][\w$.@]*):/,
       comment_regex: /(\s+;.*$|\s+#.*$|\s+\/\/.*$)/,
       filter_numeric_labels: true
@@ -51,7 +51,8 @@ class AssemblyFilterService
       # Encontra labels usados como operandos
       # Ex: call .L1, jmp .L2, mov eax, OFFSET FLAT:.LC0
       line.scan(/[\s,]([.a-zA-Z_][\w$.@<>*#"]+)/).flatten.each do |label|
-        labels.add(label)
+        # Adiciona apenas se parecer um label (começa com . ou é main)
+        labels.add(label.chomp(":")) if label.start_with?(".") || label == "main"
       end
     end
     labels
@@ -71,7 +72,7 @@ class AssemblyFilterService
       if match
         label = match[1]
         # Mantém o label se ele for usado, for 'main', ou for um label de dados (ex: .LC0).
-        if used_labels.include?(label) || label.match?(/main|^\.L[A-Z]/)
+        if used_labels.include?(label) || label.match?(/^main|^\.L[A-Z]/)
           result << line_content
         end
       # Ignora diretivas desnecessárias
