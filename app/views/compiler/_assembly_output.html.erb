@@ -1,3 +1,2 @@
-<%= turbo_frame_tag "output_frame", data: { "compiler-target": "output" } do %>
-  <pre class="w-full h-full bg-gray-900 rounded font-mono p-2 overflow-auto"><%= @assembly_output %></pre>
-<% end %>
+<pre class="absolute top-0 left-0 h-full p-2 text-right text-gray-500 bg-gray-900 rounded-l-md select-none overflow-hidden" data-compiler-target="outputLineNumbers"></pre>
+<pre class="w-full h-full bg-gray-900 rounded-md font-mono p-2 !pl-12 overflow-auto" data-action="scroll->compiler#syncScroll"><%= assembly_output %></pre>

@@ -6,14 +6,14 @@ require "timeout"
 class CompilationService
   COMPILER_TIMEOUT = 10 # Segundos
 
-  def self.call(source_code:, language:, flags:)
-    new(source_code, language, flags).call
+  def self.call(source_code:, language:, command_template:)
+    new(source_code, language, command_template).call
   end
 
-  def initialize(source_code, language, flags)
+  def initialize(source_code, language, command_template)
     @source_code = source_code
     @language = language
-    @flags = flags
+    @command_template = command_template
   end
 
   def call
@@ -55,15 +55,7 @@ class CompilationService
   end
 
   def build_command(file_path)
-    safe_flags = Shellwords.split(@flags)
-
-    case @language
-    when "cpp"
-      [ "g++", "-S", "-fno-asynchronous-unwind-tables" ] + safe_flags + [ file_path, "-o", "-" ]
-    when "go"
-      [ "go", "tool", "compile" ] + safe_flags + [ "-S", file_path ]
-    else
-      []
-    end
+    # Substitui o placeholder %{file} pelo caminho real do arquivo temporário
+    @command_template.map { |arg| arg == "%{file}" ? file_path : arg }
   end
 end

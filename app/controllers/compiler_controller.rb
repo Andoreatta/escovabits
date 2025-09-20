@@ -17,33 +17,41 @@ class CompilerController < ApplicationController
     language = params[:language] || "cpp"
     compiler_flags = params[:compiler_flags] || ""
 
-    @assembly_output = CompilationService.call(
+    command = build_command(language, compiler_flags)
+
+    assembly_output = CompilationService.call(
       source_code: source_code,
       language: language,
-      flags: compiler_flags
+      command_template: command
     )
 
-    render partial: "compiler/assembly_output"
+    @assembly_output = AssemblyFilterService.call(assembly_output, language: language)
+
+    render turbo_stream: turbo_stream.update(
+      "output_frame",
+      partial: "compiler/assembly_output",
+      locals: { assembly_output: @assembly_output }
+    )
   end
 
   def hello_world
     language = params[:language] || "cpp"
     render plain: HELLO_WORLDS.fetch(language, "")
   end
-end
+
   private
 
-  def build_command(language, file_path, flags)
-    # Sanitiza e divide as flags para evitar injeção de shell
-    safe_flags = Shellwords.split(flags)
+  def build_command(language, user_flags)
+    safe_flags = Shellwords.split(user_flags)
 
     case language
     when "cpp"
-      [ "g++", "-S", "-fno-asynchronous-unwind-tables" ] + safe_flags + [ file_path, "-o", "-" ]
+      # Flags para simplificar a saída do assembly e usar sintaxe Intel
+      default_flags = %w[-fno-ident -fno-verbose-asm -fno-unwind-tables -masm=intel]
+      [ "g++", "-S" ] + default_flags + safe_flags + [ "%{file}", "-o", "-" ]
     when "go"
       # Para Go, as flags vêm antes do comando compile
-      [ "go", "tool", "compile" ] + safe_flags + [ "-S", file_path ]
-    else
-      []
+      [ "go", "tool", "compile" ] + safe_flags + [ "-S", "%{file}" ]
     end
   end
+end
