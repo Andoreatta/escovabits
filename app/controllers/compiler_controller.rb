@@ -34,20 +34,20 @@ class CompilerController < ApplicationController
     render plain: LanguageConfigService.hello_world_for(language)
   end
 end
-  private
+  # private
 
-  def build_command(language, user_flags)
-    safe_flags = Shellwords.split(user_flags)
+  # def build_command(language, user_flags)
+  #   safe_flags = Shellwords.split(user_flags)
 
-    case language
-    when "cpp"
-      default_flags = %w[-fno-ident -fno-verbose-asm -fno-unwind-tables -masm=intel]
-      [ "g++", "-S" ] + default_flags + safe_flags + [ "%{file}", "-o", "-" ]
-    when "go"
-      # Usamos 'go build -gcflags="-S"' que lida com pacotes e imprime o assembly em stderr.
-      # O executável resultante é direcionado para um arquivo temporário (%{outfile}) que é então descartado.
-      # As flags do usuário são passadas para -gcflags.
-      gcflags = ([ "-S" ] + safe_flags).join(" ")
-      [ "go", "build", "-o", "%{outfile}", "-gcflags=#{gcflags}", "%{file}" ]
-    end
-  end
+  #   case language
+  #   when "cpp"
+  #     default_flags = %w[-fno-ident -fno-verbose-asm -fno-unwind-tables -masm=intel]
+  #     [ "g++", "-S" ] + default_flags + safe_flags + [ "%{file}", "-o", "-" ]
+  #   when "go"
+  #     # Usamos 'go build -gcflags="-S"' que lida com pacotes e imprime o assembly em stderr.
+  #     # O executável resultante é direcionado para um arquivo temporário (%{outfile}) que é então descartado.
+  #     # As flags do usuário são passadas para -gcflags.
+  #     gcflags = ([ "-S" ] + safe_flags).join(" ")
+  #     [ "go", "build", "-o", "%{outfile}", "-gcflags=#{gcflags}", "%{file}" ]
+  #   end
+  # end
